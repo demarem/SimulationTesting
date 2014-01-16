@@ -1,8 +1,9 @@
 import re
 import random
 import os
+from collections import Counter
 
-MODEL_NUMBER = r'_([0-9]+)'
+MODEL_NUMBER = r'_(\d+)'
 
 # create ModelFile instance of master
 # generate sample files based on masters models
@@ -11,16 +12,31 @@ MODEL_NUMBER = r'_([0-9]+)'
 class ModelFile():
     def __init__(self, fileName):
         self.modelFile = open(fileName, 'r')
-        self._models = None  # list of model string
+        self._models = None  # list of model strings
         self._numInstances = None  # number of models (lines in file)
+        self._modelOccurrences = Counter()
 
     def __del__(self):
         self.modelFile.close()
 
+    def _updateStats(self):
+        self._modelOccurrences.clear()
+        models = set()
+        i = -1
+        for i, line in enumerate(self.modelFile):
+            modelMatch = re.match(MODEL_NUMBER, line)
+            if modelMatch:
+                model = modelMatch.group(1)
+                models.add(model)
+                self._modelOccurrences[model] += 1
+
+        self._models = list(models)
+        self._numInstances = i + 1
+
     @property
     def models(self):
         if not self._models:
-            self._models, self._numInstances = getModelsAndCountInstances(self)
+            self._updateStats()
         return self._models
 
     @models.setter
@@ -30,7 +46,7 @@ class ModelFile():
     @property
     def numInstances(self):
         if not self._numInstances:
-            self._models, self._numInstances = getModelsAndCountInstances(self)
+            self._updateStats()
         return self._numInstances
 
     def write(self, str):
@@ -47,6 +63,13 @@ class ModelFile():
         self.modelFile.seek(0)
         for line in self.modelFile:
             yield line
+
+    def calculatePosteriorProbability(self, model):
+        if len(self._modelOccurrences.items()) == 0:
+            self._updateStats()
+        numModel = self._modelOccurrences[model]
+        total = sum(self._modelOccurrences.values())
+        return float(numModel) / total
 
     def removeRandomInstance(self):
         ''' Alters modelFile to have one less random instance (line).
@@ -81,27 +104,6 @@ class ModelFile():
         self._numInstances -= 1
 
         return removedInstance
-
-
-def getModelsAndCountInstances(modelFile):
-    ''' Generates list of all models in a file and counts number of instances.
-
-    Reads through the modelFile and produces a list of the models that
-    occur in the file. If duplicates exist in the file, each model will
-    exist in the list once.
-
-    Note:
-        modelFile has each line formatted as:
-            '_[0-9]+.+\n'
-    '''
-
-    models = set()
-    for i, line in enumerate(modelFile):
-        modelMatch = re.match(MODEL_NUMBER, line)
-        if modelMatch:
-            models.add(modelMatch.group(1))
-
-    return list(models), i + 1
 
 
 def sampleNModels(models, n):
@@ -157,7 +159,8 @@ def generateFileWithNModels(sourceModelFile, generatedFileName, n):
 
 if __name__ == '__main__':
     masterModelFile = ModelFile('test.txt')
-    genFile = generateFileWithNModels(masterModelFile, 'genFile3.txt', 3)
+    genFile = generateFileWithNModels(masterModelFile, 'genFile3.txt', 100)
+    genFile.models.sort()
     print(genFile.models, genFile.numInstances)
 
     # count lines in file before
@@ -170,3 +173,4 @@ if __name__ == '__main__':
     os.system('wc -l {}'.format(genFile.modelFile.name))
 
     print(pod)
+    print(genFile.calculatePosteriorProbability('0032'))

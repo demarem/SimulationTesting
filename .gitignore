@@ -2,3 +2,5 @@
 *.txt
 simtest.py
 *.swp
+__pycache__
+msReject
