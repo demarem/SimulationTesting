@@ -4,3 +4,7 @@ simtest.py
 *.swp
 __pycache__
 msReject
+.DS_Store
+*.swo
+posteriors/*
+priors/*

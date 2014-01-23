@@ -15,9 +15,11 @@ class ModelFile():
         self._models = None  # list of model strings
         self._numInstances = None  # number of models (lines in file)
         self._modelOccurrences = Counter()
+        self._name = fileName
 
     def __del__(self):
-        self.modelFile.close()
+        if not self.modelFile.closed:
+            self.modelFile.close()
 
     def _updateStats(self):
         self._modelOccurrences.clear()
@@ -32,6 +34,10 @@ class ModelFile():
 
         self._models = list(models)
         self._numInstances = i + 1
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def models(self):
@@ -57,7 +63,14 @@ class ModelFile():
             self._numInstances = 1
 
     def close(self):
-        self.modelFile.close()
+        if not self.modelFile.closed:
+            self.modelFile.close()
+
+    def delete(self):
+        if not self.modelFile.closed:
+            self.modelFile.close()
+
+        os.remove(self.modelFile.name)
 
     def __iter__(self):
         self.modelFile.seek(0)
@@ -156,6 +169,19 @@ def generateFileWithNModels(sourceModelFile, generatedFileName, n):
                                                 sourceModelFile, modelList)
 
     return generatedModelFile
+
+
+def getModels(priorFile, lines):
+    lines.sort()
+    models = []
+    for line, model in enumerate(priorFile):
+        if line in lines:
+            modelMatch = re.match(MODEL_NUMBER, model)
+            if modelMatch:
+                models.append(modelMatch.group(1))
+
+    return models
+
 
 if __name__ == '__main__':
     masterModelFile = ModelFile('test.txt')
