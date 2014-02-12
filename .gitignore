@@ -8,3 +8,4 @@ msReject
 *.swo
 posteriors/*
 priors/*
+*.csv
